@@ -167,6 +167,39 @@ footer {
   cursor: grabbing;
 }
 
+/* Layout containers for sidebar and chart */
+main.flex-container {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  /* Allow the flex container to span full width */
+  width: 100%;
+  max-width: none;
+}
+
+/* Sidebar holds the upload, fields and drop sections */
+.sidebar {
+  flex: 0 0 300px;
+  max-width: 320px;
+}
+
+/* Chart container grows to fill remaining space */
+.chart-container {
+  flex: 1 1 auto;
+}
+
+/* Responsive behaviour: stack on narrow screens */
+@media (max-width: 768px) {
+  main.flex-container {
+    flex-direction: column;
+  }
+  .sidebar,
+  .chart-container {
+    max-width: 100%;
+    flex: 1 0 auto;
+  }
+}
+
 .drop-container {
   margin-bottom: 1rem;
 }

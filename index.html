@@ -22,7 +22,9 @@
         stays on your device.
       </p>
     </header>
-    <main>
+    <main class="flex-container">
+      <!-- sidebar container for controls -->
+      <div class="sidebar">
       <section id="upload-section">
         <label for="fileInput" class="file-label">Choose or drag a file</label>
         <input type="file" id="fileInput" accept=".csv,.tsv,.json,.xml,.txt" />
@@ -58,9 +60,13 @@
         </div>
         <button id="plotBtn">Generate Plot</button>
       </section>
-      <section id="chart-section" class="hidden">
-        <canvas id="chartCanvas"></canvas>
-      </section>
+      </div>
+      <!-- chart container for the plot -->
+      <div class="chart-container">
+        <section id="chart-section" class="hidden">
+          <canvas id="chartCanvas"></canvas>
+        </section>
+      </div>
     </main>
     <footer>
       <p>Built for flexible data visualisation. Your data never leaves your device.</p>
