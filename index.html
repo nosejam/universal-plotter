@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universal Plotter</title>
+    <!-- Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse for robust CSV/TSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Universal Plotter</h1>
+      <p>
+        Upload a <strong>CSV</strong>, <strong>JSON</strong> or <strong>XML</strong> file
+        and build interactive charts directly in your browser. Your data
+        stays on your device.
+      </p>
+    </header>
+    <main>
+      <section id="upload-section">
+        <label for="fileInput" class="file-label">Choose or drag a file</label>
+        <input type="file" id="fileInput" accept=".csv,.tsv,.json,.xml,.txt" />
+        <div id="drop-zone">Drag &amp; drop your file here</div>
+        <div id="file-info" class="hidden"></div>
+      </section>
+      <section id="options-section" class="hidden">
+        <div class="control">
+          <label for="chartType">Chart type:</label>
+          <select id="chartType">
+            <option value="line">Line</option>
+            <option value="bar">Bar</option>
+            <option value="scatter">Scatter</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="xSelect">X-axis:</label>
+          <select id="xSelect"></select>
+        </div>
+        <div class="control">
+          <label for="ySelect">Y-axis:</label>
+          <select id="ySelect"></select>
+        </div>
+        <button id="plotBtn">Generate Plot</button>
+      </section>
+      <section id="chart-section" class="hidden">
+        <canvas id="chartCanvas" width="800" height="450"></canvas>
+      </section>
+    </main>
+    <footer>
+      <p>Built for flexible data visualisation. Your data never leaves your device.</p>
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>
