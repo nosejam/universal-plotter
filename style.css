@@ -112,11 +112,15 @@ section {
   background-color: #014f80;
 }
 
+/* Chart container expanded to occupy more vertical space */
 #chart-section {
   padding-top: 1rem;
 }
 
 canvas {
+  width: 100%;
+  height: 70vh;
+  max-height: 70vh;
   background-color: #fff;
   border-radius: 4px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
@@ -132,4 +136,64 @@ footer {
 
 .hidden {
   display: none;
+}
+
+/* Fields list and drag‑and‑drop styling */
+.column-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 8rem;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: #fafafa;
+}
+
+.column-list li {
+  padding: 0.4rem 0.6rem;
+  background-color: #026aa7;
+  color: #fff;
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  font-size: 0.9rem;
+}
+.column-list li:active {
+  cursor: grabbing;
+}
+
+.drop-container {
+  margin-bottom: 1rem;
+}
+
+.drop-container h4 {
+  margin: 0 0 0.3rem 0;
+}
+
+.drop-target {
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  padding: 1rem;
+  text-align: center;
+  min-height: 3rem;
+  color: #666;
+  background-color: #f9fafb;
+}
+
+.drop-target.dragover {
+  border-color: #026aa7;
+  background-color: #e0efff;
+  color: #026aa7;
+}
+
+.drop-target.filled {
+  border-style: solid;
+  background-color: #eef5fc;
+  color: #026aa7;
+  font-weight: bold;
 }

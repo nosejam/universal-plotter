@@ -7,6 +7,8 @@
     <title>Universal Plotter</title>
     <!-- Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js zoom plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.0"></script>
     <!-- PapaParse for robust CSV/TSV parsing -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="style.css" />
@@ -27,7 +29,25 @@
         <div id="drop-zone">Drag &amp; drop your file here</div>
         <div id="file-info" class="hidden"></div>
       </section>
-      <section id="options-section" class="hidden">
+      <!-- Section listing fields -->
+      <section id="fields-section" class="hidden">
+        <h3>Fields</h3>
+        <ul id="columnList" class="column-list"></ul>
+      </section>
+      <!-- Section for drag‑and‑drop axis/group configuration -->
+      <section id="drop-section" class="hidden">
+        <div class="drop-container">
+          <h4>X‑axis</h4>
+          <div id="dropX" class="drop-target">Drop field here</div>
+        </div>
+        <div class="drop-container">
+          <h4>Y‑axis</h4>
+          <div id="dropY" class="drop-target">Drop field here</div>
+        </div>
+        <div class="drop-container">
+          <h4>Group by (Legend)</h4>
+          <div id="dropGroup" class="drop-target">(optional)</div>
+        </div>
         <div class="control">
           <label for="chartType">Chart type:</label>
           <select id="chartType">
@@ -36,18 +56,10 @@
             <option value="scatter">Scatter</option>
           </select>
         </div>
-        <div class="control">
-          <label for="xSelect">X-axis:</label>
-          <select id="xSelect"></select>
-        </div>
-        <div class="control">
-          <label for="ySelect">Y-axis:</label>
-          <select id="ySelect"></select>
-        </div>
         <button id="plotBtn">Generate Plot</button>
       </section>
       <section id="chart-section" class="hidden">
-        <canvas id="chartCanvas" width="800" height="450"></canvas>
+        <canvas id="chartCanvas"></canvas>
       </section>
     </main>
     <footer>
