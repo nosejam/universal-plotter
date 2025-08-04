@@ -124,9 +124,8 @@ function handleFile(file) {
       parsedRows = rows;
       // Populate the draggable field list
       populateFieldList(rows);
-      // Show field section and chart layout
+      // Show field section (chart layout is always visible)
       fieldsSection.classList.remove('hidden');
-      chartLayout.classList.remove('hidden');
       // Reset selected keys and UI
       xKey = null;
       yKey = null;
@@ -375,4 +374,20 @@ setupDropTarget(dropY, (key) => {
 });
 setupDropTarget(dropGroup, (key) => {
   groupKey = key;
+});
+
+// Render an initial blank plot on page load so that the plot area and axes drop zones are visible.
+document.addEventListener('DOMContentLoaded', () => {
+  const initialLayout = {
+    title: '',
+    xaxis: { title: '' },
+    yaxis: { title: '' },
+    margin: { l: 60, r: 60, t: 20, b: 60 },
+  };
+  const initialConfig = {
+    responsive: true,
+    displaylogo: false,
+  };
+  // Draw an empty plot
+  Plotly.newPlot(plotArea, [], initialLayout, initialConfig);
 });
