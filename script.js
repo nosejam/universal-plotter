@@ -4,17 +4,19 @@
 const fileInput = document.getElementById('fileInput');
 const dropZone = document.getElementById('drop-zone');
 const fileInfo = document.getElementById('file-info');
-const chartSection = document.getElementById('chart-section');
-const chartCanvas = document.getElementById('chartCanvas');
+// Controls for selecting chart type and generating plot
 const chartTypeSelect = document.getElementById('chartType');
 const plotBtn = document.getElementById('plotBtn');
-// New UI elements for fields and drag‑and‑drop
+// Sidebar sections and lists
 const fieldsSection = document.getElementById('fields-section');
 const columnList = document.getElementById('columnList');
-const dropSection = document.getElementById('drop-section');
+// Chart layout container and drop targets
+const chartLayout = document.getElementById('chart-layout');
 const dropX = document.getElementById('dropX');
 const dropY = document.getElementById('dropY');
 const dropGroup = document.getElementById('dropGroup');
+// The Plotly plot area div
+const plotArea = document.getElementById('plotArea');
 
 // Selected keys for axes and grouping
 let xKey = null;
@@ -22,16 +24,8 @@ let yKey = null;
 let groupKey = null;
 
 let parsedRows = [];
-let chartInstance = null;
 
-// Register the Chart.js zoom plugin if available
-if (typeof Chart !== 'undefined' && typeof window !== 'undefined') {
-  // The plugin is loaded via CDN and attached to window under chartjsPluginZoom or chartjs-plugin-zoom key
-  const zoomPlugin = window['chartjs-plugin-zoom'] || window['chartjsPluginZoom'];
-  if (zoomPlugin) {
-    Chart.register(zoomPlugin);
-  }
-}
+// We no longer use Chart.js, so no chart instance is stored
 
 // Utility to detect file type by extension
 function getFileExtension(name) {
@@ -130,20 +124,16 @@ function handleFile(file) {
       parsedRows = rows;
       // Populate the draggable field list
       populateFieldList(rows);
-      // Show field and drop sections
+      // Show field section and chart layout
       fieldsSection.classList.remove('hidden');
-      dropSection.classList.remove('hidden');
+      chartLayout.classList.remove('hidden');
       // Reset selected keys and UI
       xKey = null;
       yKey = null;
       groupKey = null;
       resetDropTargets();
-      // Reset chart
-      if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-      }
-      chartSection.classList.add('hidden');
+      // Clear any existing Plotly graph
+      Plotly.purge(plotArea);
     } catch (err) {
       console.error(err);
       alert(err.message);
@@ -171,8 +161,9 @@ function populateFieldList(rows) {
 
 // Reset drop targets to default text
 function resetDropTargets() {
-  dropX.textContent = 'Drop field here';
-  dropY.textContent = 'Drop field here';
+  // Reset drop zones to their default hints
+  dropY.textContent = 'Drop Y-axis here';
+  dropX.textContent = 'Drop X-axis here';
   dropGroup.textContent = '(optional)';
   dropX.classList.remove('filled');
   dropY.classList.remove('filled');
@@ -213,6 +204,7 @@ function generateColors(count) {
 
 // Create and display chart
 function renderChart() {
+  // Validate that X and Y axes are assigned
   if (!xKey || !yKey) {
     alert('Please assign both X and Y axes by dragging fields.');
     return;
@@ -221,189 +213,102 @@ function renderChart() {
     alert('No data available to plot');
     return;
   }
-  const selectedType = chartTypeSelect.value;
-  const ctx = chartCanvas.getContext('2d');
-  // Build datasets based on grouping and chart type
+  const selectedType = chartTypeSelect.value; // 'line', 'bar', or 'scatter'
+  // Determine if X values are numeric (useful for sorting)
   const numericX = isColumnNumeric(xKey);
-  let chartConfig = null;
-  const baseOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        display: true,
-      },
-      tooltip: {
-        callbacks: {},
-      },
-      // Enable pan and zoom
-      zoom: {
-        pan: {
-          enabled: true,
-          mode: 'xy',
-        },
-        zoom: {
-          wheel: {
-            enabled: true,
-          },
-          pinch: {
-            enabled: true,
-          },
-          mode: 'xy',
-        },
-      },
-    },
-    scales: {},
-  };
-  // Remove existing chart
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-  // Grouping logic
+  // Build traces based on grouping and chart type
+  const traces = [];
+  const colors = generateColors(groupKey ? Object.keys(groupRowsByKey(parsedRows, groupKey)).length : 1);
+
   if (groupKey) {
-    // Build groups
-    const groupMap = {};
-    parsedRows.forEach((row) => {
-      const g = row[groupKey];
-      if (!groupMap[g]) groupMap[g] = [];
-      groupMap[g].push(row);
+    const grouped = groupRowsByKey(parsedRows, groupKey);
+    let colorIndex = 0;
+    Object.entries(grouped).forEach(([groupName, rows]) => {
+      const trace = buildTrace(rows, groupName, selectedType, colors[colorIndex]);
+      traces.push(trace);
+      colorIndex++;
     });
-    const groupNames = Object.keys(groupMap);
-    const colors = generateColors(groupNames.length);
-    // If numeric X values or scatter chart selected, use scatter datasets per group
-    if (numericX || selectedType === 'scatter') {
-      const datasets = groupNames.map((g, idx) => {
-        const data = groupMap[g]
-          .filter((row) => isNumeric(row[yKey]) && isNumeric(row[xKey]))
-          .map((row) => ({ x: parseFloat(row[xKey]), y: parseFloat(row[yKey]) }));
-        return {
-          label: g,
-          data: data,
-          borderColor: colors[idx],
-          backgroundColor: colors[idx] + '80',
-          showLine: selectedType === 'line',
-          fill: selectedType === 'bar',
-        };
-      });
-      chartConfig = {
-        type: 'scatter',
-        data: { datasets },
-        options: Object.assign({}, baseOptions, {
-          scales: {
-            x: {
-              type: 'linear',
-              title: { display: true, text: xKey },
-            },
-            y: {
-              type: 'linear',
-              title: { display: true, text: yKey },
-            },
-          },
-        }),
-      };
-    } else {
-      // Non-numeric X: categories with groups for line/bar charts
-      const labelSet = new Set();
-      parsedRows.forEach((row) => {
-        labelSet.add(String(row[xKey]));
-      });
-      const labels = Array.from(labelSet);
-      const datasets = groupNames.map((g, idx) => {
-        const data = labels.map((label) => {
-          const row = groupMap[g].find((r) => String(r[xKey]) === label);
-          return row && isNumeric(row[yKey]) ? parseFloat(row[yKey]) : null;
-        });
-        return {
-          label: g,
-          data,
-          borderColor: colors[idx],
-          backgroundColor: colors[idx] + '80',
-          fill: selectedType === 'bar',
-        };
-      });
-      chartConfig = {
-        type: selectedType,
-        data: { labels, datasets },
-        options: Object.assign({}, baseOptions, {
-          scales: {
-            x: {
-              type: 'category',
-              title: { display: true, text: xKey },
-            },
-            y: {
-              title: { display: true, text: yKey },
-            },
-          },
-        }),
-      };
-    }
   } else {
-    // No grouping
-    if (selectedType === 'scatter' || numericX) {
-      // Scatter or numeric line/bar: treat as scatter
-      const data = parsedRows
-        .filter((row) => isNumeric(row[yKey]) && isNumeric(row[xKey]))
-        .map((row) => ({ x: parseFloat(row[xKey]), y: parseFloat(row[yKey]) }));
-      chartConfig = {
-        type: 'scatter',
-        data: {
-          datasets: [
-            {
-              label: `${yKey} vs ${xKey}`,
-              data,
-              borderColor: '#026aa7',
-              backgroundColor: 'rgba(2,106,167,0.4)',
-              showLine: selectedType === 'line',
-              fill: selectedType === 'bar',
-            },
-          ],
-        },
-        options: Object.assign({}, baseOptions, {
-          scales: {
-            x: {
-              type: 'linear',
-              title: { display: true, text: xKey },
-            },
-            y: {
-              type: 'linear',
-              title: { display: true, text: yKey },
-            },
-          },
-        }),
-      };
-    } else {
-      // Categorical line/bar without grouping
-      const labels = parsedRows.map((row) => String(row[xKey]));
-      const data = parsedRows.map((row) => (isNumeric(row[yKey]) ? parseFloat(row[yKey]) : null));
-      chartConfig = {
-        type: selectedType,
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: yKey,
-              data,
-              borderColor: '#026aa7',
-              backgroundColor: 'rgba(2,106,167,0.4)',
-              fill: selectedType === 'bar',
-            },
-          ],
-        },
-        options: Object.assign({}, baseOptions, {
-          scales: {
-            x: {
-              type: 'category',
-              title: { display: true, text: xKey },
-            },
-            y: {
-              title: { display: true, text: yKey },
-            },
-          },
-        }),
-      };
-    }
+    // Single trace without grouping
+    const trace = buildTrace(parsedRows, `${yKey} vs ${xKey}`, selectedType, colors[0]);
+    traces.push(trace);
   }
-  chartInstance = new Chart(ctx, chartConfig);
-  chartSection.classList.remove('hidden');
+  // Build layout configuration with axis titles and interactive mode bar
+  const layout = {
+    title: `${yKey} vs ${xKey}`,
+    xaxis: { title: xKey },
+    yaxis: { title: yKey },
+    legend: { orientation: 'v', x: 1.02, y: 1 },
+    margin: { l: 60, r: 60, t: 40, b: 60 },
+    hovermode: 'closest',
+    autosize: true,
+  };
+  const config = {
+    responsive: true,
+    scrollZoom: true, // allow mouse wheel zooming
+    displaylogo: false, // hide plotly logo
+    modeBarButtonsToRemove: ['toImage'],
+  };
+  // Clear any existing chart and draw a new one
+  Plotly.react(plotArea, traces, layout, config);
+}
+
+/**
+ * Group rows by the specified key. Returns an object with group names as keys
+ * and arrays of row objects as values.
+ * @param {Array<Object>} rows
+ * @param {string} key
+ */
+function groupRowsByKey(rows, key) {
+  return rows.reduce((acc, row) => {
+    const group = row[key];
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(row);
+    return acc;
+  }, {});
+}
+
+/**
+ * Build a Plotly trace from a set of rows using the global xKey and yKey.
+ * Chooses trace type and mode based on selected chart type.
+ * @param {Array<Object>} rows
+ * @param {string} name
+ * @param {string} type
+ * @param {string} color
+ */
+function buildTrace(rows, name, type, color) {
+  const xData = [];
+  const yData = [];
+  rows.forEach((row) => {
+    let xVal = row[xKey];
+    let yVal = row[yKey];
+    // Convert numeric strings to numbers for proper axis scaling
+    if (isNumeric(xVal)) xVal = parseFloat(xVal);
+    if (isNumeric(yVal)) yVal = parseFloat(yVal);
+    xData.push(xVal);
+    yData.push(yVal);
+  });
+  // Determine Plotly trace type and mode
+  let traceType;
+  let mode;
+  if (type === 'bar') {
+    traceType = 'bar';
+    mode = undefined;
+  } else if (type === 'line') {
+    traceType = 'scatter';
+    mode = 'lines+markers';
+  } else {
+    traceType = 'scatter';
+    mode = 'markers';
+  }
+  return {
+    x: xData,
+    y: yData,
+    type: traceType,
+    mode: mode,
+    name: name,
+    marker: { color: color },
+  };
 }
 
 // Event listeners

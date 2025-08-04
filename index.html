@@ -5,10 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Universal Plotter</title>
-    <!-- Chart.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chart.js zoom plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.0"></script>
+    <!-- Plotly.js from CDN for interactive charts -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <!-- PapaParse for robust CSV/TSV parsing -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="style.css" />
@@ -36,19 +34,19 @@
         <h3>Fields</h3>
         <ul id="columnList" class="column-list"></ul>
       </section>
-      <!-- Section for drag‑and‑drop axis/group configuration -->
-      <section id="drop-section" class="hidden">
-        <div class="drop-container">
-          <h4>X‑axis</h4>
-          <div id="dropX" class="drop-target">Drop field here</div>
-        </div>
-        <div class="drop-container">
-          <h4>Y‑axis</h4>
-          <div id="dropY" class="drop-target">Drop field here</div>
-        </div>
-        <div class="drop-container">
-          <h4>Group by (Legend)</h4>
+      </div>
+      <!-- chart container for the plot -->
+      <div class="chart-container">
+        <!-- Chart layout grid: Y drop on left, plot in center, legend on right, X drop below -->
+        <div id="chart-layout" class="chart-layout hidden">
+          <!-- Y-axis drop zone on the left -->
+          <div id="dropY" class="drop-target">Drop Y-axis here</div>
+          <!-- Plotly plot area in the center -->
+          <div id="plotArea"></div>
+          <!-- Legend/group drop zone on the right -->
           <div id="dropGroup" class="drop-target">(optional)</div>
+          <!-- X-axis drop zone across the bottom -->
+          <div id="dropX" class="drop-target">Drop X-axis here</div>
         </div>
         <div class="control">
           <label for="chartType">Chart type:</label>
@@ -59,13 +57,6 @@
           </select>
         </div>
         <button id="plotBtn">Generate Plot</button>
-      </section>
-      </div>
-      <!-- chart container for the plot -->
-      <div class="chart-container">
-        <section id="chart-section" class="hidden">
-          <canvas id="chartCanvas"></canvas>
-        </section>
       </div>
     </main>
     <footer>
