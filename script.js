@@ -78,6 +78,106 @@ function parseXmlToRows(xmlString) {
   return rows;
 }
 
+// Flatten a nested object into a single-level object with dot-separated keys. Arrays are flattened by index.
+function flattenObject(obj, prefix = '') {
+  const out = {};
+  Object.keys(obj).forEach((key) => {
+    const value = obj[key];
+    const newKey = prefix ? `${prefix}.${key}` : key;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      // Recursively flatten nested objects
+      Object.assign(out, flattenObject(value, newKey));
+    } else if (Array.isArray(value)) {
+      // Flatten arrays by index
+      value.forEach((item, index) => {
+        if (item && typeof item === 'object') {
+          Object.assign(out, flattenObject(item, `${newKey}[${index}]`));
+        } else {
+          out[`${newKey}[${index}]`] = item;
+        }
+      });
+    } else {
+      out[newKey] = value;
+    }
+  });
+  return out;
+}
+
+/**
+ * Convert a parsed JSON object into an array of flattened row objects. If the JSON
+ * contains an array of objects, those objects become rows. If the JSON contains
+ * a single object with a nested array property whose elements are objects (e.g.,
+ * properties.periods in the weather example), then each element of that array
+ * becomes a row and fields from the parent object are propagated into every row.
+ *
+ * @param {Object|Array} json The parsed JSON value
+ * @returns {Array<Object>} Array of flattened row objects
+ */
+function parseJsonToRows(json) {
+  const rows = [];
+  // Find the first nested path that is an array of objects (e.g., properties.periods)
+  function findObjectArrayPath(obj, currentPath = '') {
+    // We want to find an array whose elements are plain objects (and not arrays)
+    if (Array.isArray(obj) && obj.length > 0 && obj.every((el) => typeof el === 'object' && !Array.isArray(el))) {
+      return currentPath;
+    }
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      for (const k of Object.keys(obj)) {
+        const val = obj[k];
+        const path = currentPath ? `${currentPath}.${k}` : k;
+        const found = findObjectArrayPath(val, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  // Retrieve a nested value from an object using dot-separated path
+  function getByPath(obj, path) {
+    return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj);
+  }
+  // Remove a nested property from an object using dot-separated path
+  function removePath(obj, path) {
+    const parts = path.split('.');
+    const last = parts.pop();
+    const parent = parts.reduce((acc, key) => (acc ? acc[key] : undefined), obj);
+    if (parent && typeof parent === 'object') {
+      delete parent[last];
+    }
+  }
+  if (Array.isArray(json)) {
+    json.forEach((item) => {
+      if (item && typeof item === 'object') {
+        rows.push(flattenObject(item));
+      } else {
+        rows.push({ value: item });
+      }
+    });
+  } else if (json && typeof json === 'object') {
+    const arrayPath = findObjectArrayPath(json);
+    if (arrayPath) {
+      const arr = getByPath(json, arrayPath);
+      // Deep copy of the JSON object so we can remove the array property without mutating the original
+      const baseObj = JSON.parse(JSON.stringify(json));
+      removePath(baseObj, arrayPath);
+      const baseFlatten = flattenObject(baseObj);
+      arr.forEach((el) => {
+        if (el && typeof el === 'object') {
+          const elFlatten = flattenObject(el);
+          rows.push(Object.assign({}, baseFlatten, elFlatten));
+        } else {
+          const row = Object.assign({}, baseFlatten);
+          row[arrayPath] = el;
+          rows.push(row);
+        }
+      });
+    } else {
+      // No nested array of objects found; flatten entire object into one row
+      rows.push(flattenObject(json));
+    }
+  }
+  return rows;
+}
+
 // Handler for file reading
 function handleFile(file) {
   const ext = getFileExtension(file.name);
@@ -101,21 +201,9 @@ function handleFile(file) {
         }
         rows = result.data;
       } else if (ext === 'json') {
+        // Parse JSON and flatten nested objects/arrays into rows
         const json = JSON.parse(content);
-        if (Array.isArray(json)) {
-          rows = json;
-        } else if (typeof json === 'object' && json !== null) {
-          // If object with array property: choose first property containing array
-          const arrayKey = Object.keys(json).find((key) => Array.isArray(json[key]));
-          if (arrayKey) {
-            rows = json[arrayKey];
-          } else {
-            // wrap into array
-            rows = [json];
-          }
-        } else {
-          throw new Error('Unsupported JSON structure');
-        }
+        rows = parseJsonToRows(json);
       } else if (ext === 'xml') {
         rows = parseXmlToRows(content);
       } else {
