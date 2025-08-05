@@ -231,6 +231,19 @@ main.flex-container {
   font-weight: bold;
 }
 
+/* When the drop-target is vertical (for Y-axis and group/legend), rotate the text */
+.drop-target.vertical {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+.drop-target.vertical span {
+  transform: rotate(-90deg);
+  display: inline-block;
+  white-space: nowrap;
+}
+
 /* Grid layout for the chart area: Y-axis drop on left, plot in center, legend on right, X-axis drop on bottom */
 .chart-layout {
   display: grid;
@@ -266,4 +279,32 @@ main.flex-container {
 /* Ensure the plot area expands to fill its grid cell */
 #plotArea > div {
   height: 100% !important;
+}
+
+/* Styling for the URL input and button in the upload section */
+.url-input-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+#urlInput {
+  flex: 1;
+  padding: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+#urlBtn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  background-color: #026aa7;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#urlBtn:hover {
+  background-color: #014f80;
 }

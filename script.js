@@ -7,6 +7,9 @@ const fileInfo = document.getElementById('file-info');
 // Controls for selecting chart type and generating plot
 const chartTypeSelect = document.getElementById('chartType');
 const plotBtn = document.getElementById('plotBtn');
+// URL input and button for loading remote files
+const urlInput = document.getElementById('urlInput');
+const urlBtn = document.getElementById('urlBtn');
 // Sidebar sections and lists
 const fieldsSection = document.getElementById('fields-section');
 const columnList = document.getElementById('columnList');
@@ -242,6 +245,69 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 
+/**
+ * Load data from a remote URL. Attempts to fetch the file and parse it just
+ * like a local upload. Supports CSV, TSV, JSON and XML based on the file
+ * extension, with a fallback to JSON parsing for unknown extensions.
+ */
+async function handleUrlLoad() {
+  const url = urlInput.value.trim();
+  if (!url) return;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status}`);
+    }
+    const contentType = response.headers.get('Content-Type') || '';
+    const text = await response.text();
+    // Infer file extension from URL path (ignoring query/fragment)
+    const urlPath = url.split('?')[0].split('#')[0];
+    const ext = getFileExtension(urlPath);
+    let rows;
+    if (ext === 'csv' || ext === 'tsv' || ext === 'txt') {
+      const result = Papa.parse(text, {
+        header: true,
+        dynamicTyping: false,
+        skipEmptyLines: true,
+        delimiter: ext === 'tsv' ? '\t' : '',
+      });
+      if (result.errors && result.errors.length) {
+        console.warn(result.errors);
+      }
+      rows = result.data;
+    } else if (ext === 'json' || contentType.includes('application/json')) {
+      const json = JSON.parse(text);
+      rows = parseJsonToRows(json);
+    } else if (ext === 'xml' || contentType.includes('xml')) {
+      rows = parseXmlToRows(text);
+    } else {
+      // Fallback: attempt JSON parse
+      try {
+        const maybeJson = JSON.parse(text);
+        rows = parseJsonToRows(maybeJson);
+      } catch (err) {
+        throw new Error('Unsupported file type');
+      }
+    }
+    // Store rows and update UI
+    parsedRows = rows;
+    populateFieldList(rows);
+    fieldsSection.classList.remove('hidden');
+    // Reset drop targets and state
+    xKey = null;
+    yKey = null;
+    groupKey = null;
+    resetDropTargets();
+    fileInfo.textContent = `Loaded: ${url}`;
+    fileInfo.classList.remove('hidden');
+    // Clear any existing Plotly graph
+    Plotly.purge(plotArea);
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+}
+
 // Populate the field list for drag‑and‑drop
 function populateFieldList(rows) {
   columnList.innerHTML = '';
@@ -262,9 +328,22 @@ function populateFieldList(rows) {
 // Reset drop targets to default text
 function resetDropTargets() {
   // Reset drop zones to their default hints
-  dropY.textContent = 'Drop Y-axis here';
+  // Y-axis: if there is a child span (vertical drop zone), reset its text
+  const spanY = dropY.querySelector('span');
+  if (spanY) {
+    spanY.textContent = 'Drop Y-axis here';
+  } else {
+    dropY.textContent = 'Drop Y-axis here';
+  }
+  // X-axis is horizontal; set text directly
   dropX.textContent = 'Drop X-axis here';
-  dropGroup.textContent = '(optional)';
+  // Group/legend: handle span similarly
+  const spanG = dropGroup.querySelector('span');
+  if (spanG) {
+    spanG.textContent = '(optional)';
+  } else {
+    dropGroup.textContent = '(optional)';
+  }
   dropX.classList.remove('filled');
   dropY.classList.remove('filled');
   dropGroup.classList.remove('filled');
@@ -446,6 +525,11 @@ plotBtn.addEventListener('click', () => {
   renderChart();
 });
 
+// URL button event
+urlBtn?.addEventListener('click', () => {
+  handleUrlLoad();
+});
+
 // Setup drag‑and‑drop for axis and group targets
 function setupDropTarget(target, assignFn) {
   target.addEventListener('dragover', (e) => {
@@ -461,8 +545,18 @@ function setupDropTarget(target, assignFn) {
     const key = e.dataTransfer.getData('text/plain');
     if (key) {
       assignFn(key);
-      target.textContent = key;
+      // If the target contains a span (for vertical drop zones), set its text
+      const span = target.querySelector('span');
+      if (span) {
+        span.textContent = key;
+      } else {
+        target.textContent = key;
+      }
       target.classList.add('filled');
+      // Automatically re-render chart if both axes are assigned and there is data
+      if (xKey && yKey && parsedRows && parsedRows.length > 0) {
+        renderChart();
+      }
     }
   });
 }
