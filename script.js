@@ -163,8 +163,14 @@ function parseJsonToRows(json) {
       arr.forEach((el) => {
         if (el && typeof el === 'object') {
           const elFlatten = flattenObject(el);
-          rows.push(Object.assign({}, baseFlatten, elFlatten));
+          const prefixed = {};
+          // Prefix each flattened key with the array path (e.g., properties.periods.startTime)
+          Object.entries(elFlatten).forEach(([k, v]) => {
+            prefixed[`${arrayPath}.${k}`] = v;
+          });
+          rows.push(Object.assign({}, baseFlatten, prefixed));
         } else {
+          // Primitive element: assign directly to arrayPath
           const row = Object.assign({}, baseFlatten);
           row[arrayPath] = el;
           rows.push(row);
