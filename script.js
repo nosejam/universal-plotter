@@ -200,7 +200,7 @@ function handleFile(file) {
           header: true,
           dynamicTyping: false,
           skipEmptyLines: true,
-          delimiter: ext === 'tsv' ? '\t' : '', // auto for csv, tsv for ts
+          delimiter: ext === 'tsv' ? '\t' : '', // auto for csv, tsv for txt
         });
         if (result.errors && result.errors.length) {
           console.warn(result.errors);
@@ -211,9 +211,16 @@ function handleFile(file) {
         const json = JSON.parse(content);
         rows = parseJsonToRows(json);
       } else if (ext === 'xml') {
+        // Parse XML into rows
         rows = parseXmlToRows(content);
       } else {
-        throw new Error('Unsupported file type');
+        // Fallback: attempt to parse as JSON for files without extension or unknown extension
+        try {
+          const maybeJson = JSON.parse(content);
+          rows = parseJsonToRows(maybeJson);
+        } catch (parseErr) {
+          throw new Error('Unsupported file type');
+        }
       }
       parsedRows = rows;
       // Populate the draggable field list
